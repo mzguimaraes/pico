@@ -1,0 +1,1372 @@
+pico-8 cartridge // http://www.pico-8.com
+version 16
+__lua__
+--main functions for the game
+-------------------------------
+state = 0
+
+player = {}	--player stats
+diag = {}			--stuff trainer says
+quota = {} 	--what player need to do
+												--to place at the olympics
+animupdate = 30
+
+lines = {}
+clouds = {}
+hurdles = {}
+finaltimes = {}
+
+month = 1
+
+--global vars here
+function _init()
+	_dialogues()
+	
+	player["level"] = 0.75
+	player["tox"] = 0
+	player["f"] = 12
+	player["s"] = 0
+	player["x"] = 15
+	player["y"] = 40
+	player["j"] = false
+	player["jt"] = 30
+	player["spd"] = 0
+	
+	finaltimes[1] = 12.00
+	finaltimes[2] = 15.00
+	finaltimes[3] = 18.00
+
+	_redraw()
+end
+
+--calls update function from
+--relevant gamestate
+function _update60()
+	if(state == 0) then
+		if(btn(5,0)) then
+			state = 1
+		end
+	elseif(state == 1) then
+		_s1update()
+	elseif(state == 2) then
+		_s2update()
+	elseif(state == 3) then
+		_s3update()
+	elseif(state == 4) then
+		_s4update()
+	end
+end
+
+function _draw()
+	--default state - possible menu?
+	if(state == 0) then
+		--map & screen reset here
+		cls()
+ 	map(48,0,0,16,32,32)
+ 	palt(11,true) 
+ 	
+ 	spr(103,36,36,7,2)
+ 	
+ 	print("by charles yu",
+ 	39,51,6) 
+ 	
+ 	print("press 'x' to start",
+ 	28,80,2) 
+ 
+ --locker room state
+ elseif(state == 1) then
+ 	_s1draw();
+
+ --running state
+ elseif(state == 2) then
+ 	_s2draw();
+ 
+ elseif(state == 3) then
+ 	_s3draw();
+ 	
+ --drug test state
+ elseif(state == 4) then
+ 	_s4draw();
+ end
+end
+
+
+function _addhurdles(x)
+ --adds hurdles here
+ for i=0,x do
+ 	add(hurdles, {x=100+(80*i), y=40,
+	 f= false})
+ end
+end
+
+function _redraw()
+	--adds boundary lines here
+ for i=0,10 do
+ 	add(lines, {x=(40*i), y=36, f= false})
+ end
+ add(lines, {x=(1200), y=36, f= true})
+ 
+ --adds clouds here
+ for i=0, 8 do
+ 	add(clouds, {x=-10+rnd(300), 
+ 	y=16+rnd(8),c = rnd(4)})
+ end
+end
+-->8
+--locker room business
+-------------------------------
+first = false
+started = false
+mesindex = 1
+mesfinished = false
+mesflash = 0
+
+drugchosen = false
+cotimer = 8
+temp = {}
+text = {}
+
+
+function _s1update()
+
+	if(first == false) then
+		_assignmon()
+		first = true
+	end
+
+--------------------------------
+--player input here
+--------------------------------
+
+--press x to continue mes
+if(btn(5,0)) and mesindex < temp[0] then
+	if(mesfinished == true) and
+	(drugchosen == false) then
+	text = {}
+		mesindex += 1
+		mesfinished = false
+		started = false
+	elseif (drugchosen == true) then
+		state = 2
+	end
+end
+
+--press up to blood dope
+if(btn(2,0)) and 
+drugchosen == false then
+	player.level += 0.035
+	player.tox +=0.1
+	text = {}
+	temp = drug
+	mesindex = 1
+	mesfinished = false
+	started = false
+	drugchosen = true
+end
+
+--press left to painkiller
+if(btn(0,0)) and 
+drugchosen == false then
+	player.level += 0.075
+	player.tox +=0.25
+	text = {}
+	temp = drug
+	mesindex = 2
+	mesfinished = false
+	started = false
+	drugchosen = true
+end
+
+--press right to steroid
+if(btn(1,0)) and 
+drugchosen == false then
+	player.level += 0.125
+	player.tox +=0.5
+	text = {}
+	temp = drug
+	mesindex = 3
+	mesfinished = false
+	started = false
+	drugchosen = true
+end
+
+--press down to not use any drug
+if(btn(3,0)) and 
+drugchosen == false then
+	player.tox -= 0.15
+	
+	--toxicity can't drop below 0
+	if(player.tox < 0) then
+		player.tox = 0
+	end
+	
+	text = {}
+	temp = drug
+	mesindex = 4
+	mesfinished = false
+	started = false
+	drugchosen = true
+	
+--	if(month == 6) or (month == 9) 
+--	or(month == 12) then
+	--	mesindex = 5
+--	end
+end
+
+--------------------------------
+--dialog code begins here
+--------------------------------
+	if(started == false) then
+	
+		cor = cocreate(_diag)
+		coresume(cor,temp[mesindex],10,16)
+
+		started = true
+	end
+	
+	if(cotimer <=0) and
+	(costatus(cor) ~= 'dead') then
+			coresume(cor)
+	elseif(costatus(cor) == 'dead') then
+			mesfinished = true
+	end
+	cotimer -= 1
+	
+	
+end
+
+--draws locker room stuff
+function _s1draw()
+
+		--moves camera to locker scene
+		cls()
+ 	map(22,0,0,5,16,16)
+ 	palt(11,true) 
+ 	
+ 	--draws the trainer here
+ 	spr(134,8,40,4,8)
+ 	
+ 	--player stats drawn here
+ 	print("fitness :|", 1,104,7)
+ 	print("toxicity:|", 1,111,7)
+		for i=0,2 do
+		
+			if(player.level < 2.1) then
+ 		line(39,105+i,(player.level-0.75
+ 		)*37+39,105+i,10)
+ 		else
+ 		line(39,105+i,75+39,105+i,10)
+ 		end
+ 		
+ 		if(player.tox > 1) then
+ 			player.tox = 1
+ 		end	
+ 		
+ 		line(39,112+i,(player.tox)*75+39
+ 		,112+i,11)
+		end
+		
+		local c = 12
+		if(month < 6) then
+			c = 12
+		elseif (month >= 6) and
+		(month < 11) then
+			c = 9
+		else
+			c = 8
+		end
+		
+		if(month < 13) then
+			print(tostr(13-month) .." months",1,118,c)
+			print(" until the olympics", 36,118,5)
+ 	else
+ 	print("at the olympics!!", 6,118,8)
+ 	end
+ 	--draws response opions
+ 	if(drugchosen ==false) then
+ 	
+ 		--arrow key indicators
+ 		spr(193,54,64,1,1)
+ 		spr(209,54,74,1,1)
+ 		spr(225,54,84,1,1)
+ 		spr(241,54,94,1,1)
+ 		
+ 		--text descriptions
+ 		print("refuse drugs",65,66,8)
+ 		print("blood doping",65,76,12)
+ 		print("narcotic pk.",65,86,12)
+ 		print("ex. steroids",65,96,12)
+ 		end
+ 		 		
+ 		--writes trainer dialog here
+ 		for i=1,10 do
+ 			if(text[i]) then
+ 				print(text[i],56,2+(7*i),0)
+ 			end
+ 		
+ 		--displays when dialog finished
+ 		if(mesfinished == true) and
+ 				(mesindex < temp[0]) then
+ 				
+ 				--flashes the continue mes
+ 				if(mesflash < 15) then
+ 					spr(14,110,52,1,1)
+ 				else
+ 					spr(30,110,52,1,1)
+ 				end
+ 				
+ 				--increments once 1/4 sec
+ 				mesflash += 0.2
+ 				if(mesflash > 30) then
+ 					mesflash =0
+ 				end
+ 		end
+ 	end
+end
+
+--prints trainer dialog
+function _diag(x,n,l) 
+	
+	--while there are lines left to print...
+	for i=1,n do
+	
+		--for each character in the line...
+		for j=1,l do		
+			text[i] = sub(x[i],1,j)
+			yield()
+		end
+	end
+	mesfinished = true
+	yield()
+end
+
+--assigns the dialogue tree
+function _assignmon()
+		if(month == 1) then
+			temp = jan
+			
+		elseif(month == 2) then
+			temp = feb
+			
+		elseif(month == 3) then
+			temp = mar
+		
+		elseif(month == 4) then
+			temp = apr
+			
+		elseif(month == 5) then
+			temp = may
+		
+		elseif(month == 6) then
+			temp = jun
+		
+		elseif(month == 7) then
+			temp = jul
+				
+		elseif(month == 8) then
+			temp = aug
+			
+		elseif(month == 9) then
+			temp = sep
+		
+		elseif(month == 10) then
+			temp = oct
+		
+		elseif(month == 11) then
+			temp = nov		
+		
+		elseif(month == 12) then
+			temp = dec
+		
+		elseif(month == 13) then
+			temp = fin
+			
+		else
+			temp = default
+		end
+end
+-->8
+--actual 100 meters here
+-------------------------------
+lastpressed = 0
+distance = 0
+passed = 0
+final = 1000
+bigcloudx = 50 + rnd(100)
+timer = 0
+
+hurdleshit = 0
+countdown = 60
+finished = false
+
+function _s2update()
+-------------------------------
+--player running ctrled here
+-------------------------------
+if btn(0,0) and player.j == false and
+lastpressed == 0 then
+	lastpressed = 1
+	player.spd += 0.3
+end
+
+if btn(1,0) and player.j == false and
+lastpressed == 1 then
+	lastpressed = 0
+	player.spd += 0.25 * player.level
+end
+
+--jumps when the player hits up
+if btn(2,0) then
+
+	if(player.j == false) then
+		player.j = true
+	else
+		player.jt-=1
+	end
+	
+	--jump can only last so long
+	if(player.jt <= 0) then
+		player.j = false
+	end	
+elseif(btn(2,0) == false) then
+	player.j = false
+	player.jt = 30
+end
+
+-------------------------------
+--track movement & animation
+-------------------------------
+if(player.spd > 0) then
+	if(player.j == true) then
+		player.spd -= 0.01
+	else
+		player.spd -= 0.05
+	end
+else
+	player.spd = 0
+end
+
+--changes player height when jumping
+if(player.j == true) then
+	if(player.y > 30) then
+		player.y -= 1
+	end
+else
+	if(player.y < 40) then
+		player.y += 1
+	end
+end
+
+--while finish line is not in
+--sight, the lines increment
+if(final > 100) then
+--updates lines on track
+for l in all(lines) do
+
+if(l.x <= final) then
+	l.x -= player.spd/30
+end
+	
+		--tracks location of finish line	
+		if(l.f == true) then
+			final = l.x
+		end
+	
+	--resets location of line
+	if(l.x <= -20) then
+		l.x += 40 * 10
+		passed += 1
+	end
+end
+
+--moves the hurdles and checks player
+for h in all(hurdles) do
+	if(h.x <= final) then
+		h.x -= player.spd/30
+	end
+	
+	--moves hurdle back right
+	if(h.x <= -40) then
+		h.x += 80 * 10
+		h.f = false
+	end
+	
+		--checks if hurdle hit player
+	if(player.x+4 > h.x+4) and
+			(player.x+4 < h.x+7) then
+			
+			--if player is not jumping
+			if(player.y > 35) and
+			(h.f == false) then
+				h.f = true
+				player.spd = player.spd/15
+				hurdleshit += 1
+			end
+	end
+end
+
+for c in all(clouds) do
+	c.x -= player.spd/2500
+	bigcloudx -= player.spd/2400
+end
+
+	if(finished == false) then
+		timer += 1/60;
+	end
+end
+
+--when finish line is in sight
+--the player moves over it
+if(final <= 101) then
+	player.x += player.spd/15
+end	 
+
+-------------------------------
+--end condition evaluated here
+-------------------------------
+if(player.x >= 120) then
+	finished = true
+end
+
+if(finished == true) then
+	countdown -= 1
+end
+
+if(countdown <= 0) then
+	if(18-hurdleshit/player.level-timer > 0) then
+		player.level += (18-hurdleshit/player.level-timer)/24
+	end
+	
+		month += 1
+	
+	if(month == 7) or (month == 11)
+	or (month == 13) then
+		tested = false
+		state = 4
+		_state1reset()
+	
+	elseif(month == 14) then
+		_checkend(timer)
+		state = 3
+
+	else
+		state = 1
+		_state1reset()
+	end
+end
+-------------------------------
+--player animation updtes here
+-------------------------------
+	player.f += 1
+	if(player.f >= (animupdate
+	-player.spd/2)) then
+		player.s += 1
+		player.f = 0
+	end
+	if(player.s >= 4) then
+		player.s = 0
+	end
+end
+
+--moves map to 100 meter location
+function _s2draw()
+		
+		--clrs and resets screen
+		cls()
+ 	map(0,0,0,16,32,32)
+ 	palt(11,true) 
+--------------------------------
+--main sprites drawn here
+--------------------------------
+ 	
+	--updates lines on track
+	for l in all(lines) do
+		if(l.f == false) then
+			spr(22,l.x,l.y,3,3)
+		else
+			spr(09,l.x,l.y,4,3)
+		end
+	end 
+	
+	--draws all hurdles
+	for h in all(hurdles) do
+		if(h.f == false) then
+			spr(1,h.x,h.y,1,2)
+		else
+		spr(32,h.x,h.y,2,1)
+		end
+	end
+	
+	--clouds in the air
+	for c in all(clouds) do
+		if(c.c < 1) then
+			spr(75,c.x,c.y,1,1)
+		elseif(c.c > 1) and (c.c <2) then
+			spr(76,c.x,c.y,1,1)
+		elseif(c.c > 2) and (c.c <3) then
+			spr(91,c.x,c.y,1,1)
+		else
+			spr(92,c.x,c.y,1,1)
+		end
+	end 
+ spr(69,bigcloudx,21,6,2)
+ 
+ 	--player sprite drawn here
+ 	if(player.spd > 0) then
+ 		if(player.j == false) then
+ 			spr(64+player.s,player.x,player.y,1,2)
+			end
+		else
+			spr(64,player.x,player.y,1,2)
+		end
+		
+		if(player.j == true) then
+			spr(68,player.x,player.y,1,2)
+		end
+--------------------------------
+--ui stuff drawn here
+--------------------------------
+		
+		if(month == 13) then
+			print("at the olympics!!",1,74,8)
+		end
+		
+		--draws "power" meter
+		print("power:|", 1,9,7)
+		for i=0,2 do
+ 		line(27,10+i,(player.spd)/3+27
+ 		,10+i,8)
+		end
+		
+		--draws timer here
+		t = "⧗: " .. tostr(timer)
+		print(t,0,2,6)
+end
+
+--resets everything back to norm
+function _state1reset()
+	
+	--key state 1 vars reset here
+	first = false
+	started = false
+	mesindex = 1
+	mesfinished = false
+	mesflash = 0
+	drugchosen = false
+	cotimer = 8
+ temp = {}
+	text = {}
+	
+	--state 2 global vars reset too
+	lastpressed = 0
+	distance = 0
+	passed = 0
+	final = 1000
+	bigcloudx = 50 + rnd(100)
+ timer = 0
+	countdown = 60
+	finished = false
+	hurdleshit = 0
+	
+	--resets the player's values
+	player["s"] = 0
+	player["x"] = 15
+	player["y"] = 40
+	player["j"] = false
+	player["jt"] = 30
+	player["spd"] = 0
+	
+	lines = {}
+ clouds = {}
+ hurdles = {}
+	
+	_redraw()
+	_addhurdles((month-1))
+end
+
+--compares the player's final 
+--times with olympic times, then
+--loads the appropriate ending
+function _checkend(x)
+	
+	if(x < finaltimes[1]) then
+		finaltimes[3] = finaltimes[2]
+		finaltimes[2] = finaltimes[1]
+		finaltimes[1] = x
+		ending = 1
+		
+	elseif (x < finaltimes[2]) then
+		finaltimes[3] = finaltimes[2]
+		finaltimes[2] = x
+		ending = 2
+		
+	elseif (x < finaltimes[3]) then
+		finaltimes[3] = x
+		ending = 3
+	
+	else
+		ending = 0
+	end
+
+end
+-->8
+--ending screen held here
+--------------------------------
+ending = 0
+
+function _s3update()
+	if(btn(5,0)) then
+		_state1reset()
+		player.level = 0.75
+		player.tox = 0
+		state = 0
+	end
+end
+
+function _s3draw()
+
+		--clrs and resets screen
+		cls()
+ 	map(48,0,0,16,32,32)
+ 	palt(11,true) 
+ 	
+ 	print("press 'x' to reset",
+ 	28,100,2)
+	
+	--drug test failed!
+	if(ending == -1) then
+		print("having been outed by a drug test,"
+		,0,25,7)
+		print("you are forced to return home in "
+		,0,35,7)
+		print("disgrace. let go from the olympic"
+		,0,45,7)
+		print("team, you family lives out the 		"
+		,0,55,7)
+		print("of their days in squalor, always "
+		,0,65,7)
+		print("resenting you for your weakness. "
+  ,0,75,7)	
+	else		
+		--medal placements
+		spr(96,36,10,2,2)
+		spr(98,36,26,2,2)
+		spr(100,37,42,2,2)
+		print(finaltimes[1].." sec", 63,16,6)
+		print(finaltimes[2].." sec", 63,32,6)
+		print(finaltimes[3].." sec", 63,48,6)
+	end
+	
+	--describes ending
+	if(ending==0) then
+		print("though you did make it to the ol"
+		,0,64,7)
+		print("-ympic games, you were unable to"
+		,0,72,7)
+		print("win any medals. ending your athl"
+		,0,80,7)
+		print("-etic career in mediocrity."
+		,0,88,7)
+	
+	--first place
+	elseif (ending == 1) then
+	print(finaltimes[1].." sec", 63,16,12)
+		print("after years of hard work (and pr"
+		,0,64,7)
+		print("-obably some hard drugs), you ma"
+		,0,72,7)
+		print("-nage to come home with the gold!"
+		,0,80,7)
+		print("congratulations!"
+		,0,88,7)
+	
+	--silver medal
+	elseif (ending == 2) then
+	print(finaltimes[2].." sec", 63,32,12)
+		print("having earned the silver part of"
+		,0,64,7)
+		print("you can't help but feel disappoi"
+		,0,72,7)
+		print("-nted. still, it certainly wasnt"
+		,0,80,7)
+		print("easy. be proud of your win!"
+		,0,88,7)
+	
+	--bronze medal here
+	elseif (ending == 3) then
+	print(finaltimes[3].." sec", 63,48,12)
+		print("it hurts standing there with the"
+		,0,64,7)
+		print("ronze medal,after everything you"
+		,0,72,7)
+		print("did to get this far. still, at  "
+		,0,80,7)
+		print("least it's better than nothing."
+		,0,88,7)
+	end
+
+end
+-->8
+--drug testing calcs done here
+-------------------------------
+dtcd = 600
+dt = 1
+result = false
+tested = false
+
+function _s4update()
+	dtcd-= 1
+	
+	if(tested == false) then
+		dt = rnd(1)
+		tested = true
+	end
+	
+	--test results evaluated here
+	if(dt) and (dt > player.tox) then
+		result = false
+	else
+		result = true
+	end
+	
+	--at the end of the timer
+	if(dtcd < 0) then
+		if(result == false) then
+			_state1reset()
+			state = 1
+		else
+			ending = -1
+			state = 3
+		end
+	end
+
+end
+
+function _s4draw()
+
+		--clrs and resets screen
+		cls()
+ 	map(48,0,0,16,32,32)
+ 	palt(11,true) 
+ 	
+ 	--satic text here
+ 	print("drug test in progress"
+ 	,20,30,6)
+ 	
+ 	--filling the piss cup
+ 	if(dtcd > 540) then
+			sspr(81,25,8,8,50,40,24,24)
+		elseif (dtcd > 480) then
+			sspr(89,25,8,8,50,40,24,24)
+		elseif (dtcd > 420) then
+			sspr(97,25,8,8,50,40,24,24)
+		elseif (dtcd > 360) then
+			sspr(105,25,8,8,50,40,24,24)
+		else
+			sspr(113,25,8,8,50,40,24,24)
+		end
+		
+		--shows drug test result
+		if(dtcd < 300) then
+			if(result == false) then
+				print("you passed!!",36,66,11)
+			else
+				print("you failed!!",36,66,8)
+			end
+		end
+end
+-->8
+default = {}
+test = {}
+intro = {}
+
+drug = {}
+druga = {}
+drugb = {}
+drugc = {}
+nodrug = {}
+drugtestsoon = {}
+
+j1 = {}
+j2 = {}
+j3 = {}
+jan = {}
+
+f1 = {}
+f2 = {}
+feb = {}
+
+m1 = {}
+m2 = {}
+mar = {}
+
+a1 = {}
+a2 = {}
+a3 = {}
+apr = {}
+
+ma1 = {}; ma2 = {}; may = {}
+jun1 = {}; jun = {}
+jul1 = {}; jul2 = {}; jul = {}
+au1 = {}; au2 = {}; aug = {}
+s1 = {};s2 = {}; s3 = {}; sep = {}
+o1 = {}; o2 = {}; oct = {}
+n1 = {}; n2 = {}; nov = {}
+d1 = {}; d2 = {}; dec = {}; d3 = {}
+f1 = {}; f2 = {}; fin = {}
+
+function _dialogues()
+	_drug()
+	
+	--first message to player
+	intro[1]			= "hey, there! i'm "
+	intro[2]   = "your personal tr"
+	intro[3]			=	"-ainer! over the"
+	intro[4]   = "next year i will"
+	intro[5]   = "helping you to  "
+	intro[6]			=	"your full potent"
+	intro[7]		 = "-ial."
+	
+	--january message 1
+	j1[1] = "we got a year to"
+	j1[2] = "the olympics, so"
+	j1[3] = "you need to trai"
+	j1[4] = "-n hard if you  "
+	j1[5] = "want to stand a "
+	j1[6] = "chance at the go"
+	j1[7] = "-ld."
+	
+	j2[1] = "i got some, er, "
+	j2[2] = "'medication'here"
+	j2[3] = "to help you get "
+	j2[4] = "stronger, faster"
+	j2[5] = ". let me know if"
+	j2[6] = "you need any."
+	
+	j3[1] = "remember: the so"
+	j3[2] = "-ooner you start"
+	j3[3] = "the better your "
+	j3[4] = "results will be."
+	
+	jan = {intro,j1,j2,j3}
+	jan[0] = 4
+	
+	f1[1] = "remember: you ca"
+	f1[2] = "-n't just dope  "
+	f1[3] = "the day before  "
+	f1[4] = "and expect good "
+	f1[5] = "results."
+	
+	f2[1] = "the better your "
+	f2[2] = "results in train"
+	f2[3] = "-ing is, the bet"
+	f2[4] = "-ter equipped   "
+	f2[5] = "you'll be when  "
+	f2[6] = "the time comes. "
+	
+	feb = {f1,f2}
+	feb[0] = 2
+	
+	m1[1] = "make sure you be"
+	m1[2] = "careful with the"
+	m1[3] = "drugs. higher   "
+	m1[4] = "toxicity makes  "
+	m1[5] = "it easier to    "
+	m1[6] = "detect in a test"
+	
+	m2[1] = "i'll give you a "
+	m2[2] = "heads up on the "
+	m2[3] = "month before.   "
+	m2[4] = "just be smart,  "
+	m2[5] = "okay?           "
+
+	mar = {m1,m2}
+	mar[0] = 2
+	
+	a1[1] = "blood doping is "
+	a1[2] = "a bit weal, but "
+	a1[3] = "it's also virtua"
+	a1[4] = "-lly impossible "
+	a1[5] = "to detect.      "
+	
+	a2[1] = "narcotic painkil"
+	a2[2] = "-lers can help  "
+	a2[3] = "you push harder,"
+	a2[4] = "but they're a   "
+	a2[5] = "bit easier to te"
+	a2[6] = "-st for.        "
+
+	a3[1] = "steroids are the"
+	a3[2] = "easiest to test,"
+	a3[3] = "and also give   "
+	a3[4] = "the best results"
+	a3[5] = "so be careful!  "
+	
+	apr = {a1,a2,a3}
+	apr[0] = 3
+	
+	ma1[1] ="you first test  "
+	ma1[2] ="is coming next  "
+	ma1[3] ="month. after tra"
+	ma1[4] ="-ining, you'll  "
+	ma1[5] ="have your urine "
+	ma1[6] ="tested for signs"
+	ma1[7] ="of doping.      "
+	
+	ma2[1] ="so, you may want"
+	ma2[2] ="to hold off on  "
+	ma2[3] ="the stuff if you"
+	ma2[4] ="don't wanna get "
+	ma2[5] ="caught.         "
+	
+	may = {ma1,ma2}
+	may[0] = 2
+	
+	jun1[1]="quick reminder, "
+	jun1[2]="the test is     "
+	jun1[3]="today. good luck"
+	jun1[4]="failing is a car"
+	jun1[5]="-eer ender.     "
+	
+	jun = {jun1}
+	jun[0] = 1
+	
+	jul1[1]="congrats on the "
+	jul1[2]="drug test! you  "
+	jul1[3]="haven't been kic"
+	jul1[4]="-ked off the    "
+	jul1[5]="team yet, so you"
+	jul1[6]="must've passed! "
+	
+	jul2[1]="no slacking now,"
+	jul2[2]="we're halfway   "
+	jul2[3]="there!          "
+	
+	jul = {jul1,jul2}
+	jul[0] = 2
+	
+	au1[1]= "how are you doin"
+	au1[2]= "with the hurdles"
+	au1[3]= "? we've been inc"
+	au1[4]= "-reasing them,  "
+	au1[5]= "and are now at  "
+	au1[6]= "about the number"
+	au1[7]= "at the olympics."
+	
+	au2[1]= "if you get used "
+	au2[2]= "to it now, you  "
+	au2[3]= "will do just fin"
+	au2[4]= "-e when you get "
+	au2[5]= "there.          "
+	
+	aug = {au1,au2}
+	aug[0] = 2
+	
+	s1[1] = "you're doing bet"
+	s1[2] = "-ter. i can see "
+	s1[3] = "the improvement!"
+	s1[4] = "but don't get   "
+	s1[5] = "complacent - the"
+	s1[6] = "best athletes in"
+	s1[7] = "the world...    "
+	
+	s2[1] = "are going to be "
+	s2[2] = "in that stadium,"
+	s2[3] = "and they all are"
+	s2[4] = "dopers. so you  "
+	s2[5] = "won't stand a ch"
+	s2[6] = "-ance without   "
+	s2[7] = "drugs.          "
+	
+	s3[1] = "speaking of, you"
+	s3[2] = "have another    "
+	s3[3] = "test next month."
+	s3[4] = "prepare accordin"
+	s3[5] = "-gly.           "
+	
+	sep = {s1,s2,s3}
+	sep[0] = 3
+	
+	o1[1] = "another reminder"
+	o1[2] = "you got a drug  "
+	o1[3] = "test today. so  "
+	o1[4] = "do watchu gotta "
+	o1[5] = "do.             "
+	
+	o2[1] = "after all our   "
+	o2[2] = "work, you wouldn"
+	o2[3] = "'t want to fall "
+	o2[4] = "at the first    "
+	o2[5] = "hurdle, would   "
+	o2[6] = "you?            "
+	
+	oct = {o1,o2}
+	oct[0] = 2
+	
+	n1[1] = "almost there kid"
+	n1[2] = "! remember: they"
+	n1[3] = "also test right "
+	n1[4] = "before the olymp"
+	n1[5] = "-ics too, so be "
+	n1[6] = "mindful these ne"
+	n1[7] = "-xt two months. "
+	
+	n2[1] = "we're in a home "
+	n2[2] = "stretch, so give"
+	n2[3] = "it your all!    "
+	
+	nov = {n1,n2}
+	nov[0] = 2
+	
+	d1[1] = "last training   "
+	d1[2] = "session kid, the"
+	d1[3] = "next time we see"
+	d1[4] = "each other, you "
+	d1[5] = "will either be a"
+	d1[6] = "loser or a hero."
+	
+	d2[1] = "one last test be"
+	d2[2] = "-fore the games,"
+	d2[3] = "and it will be  "
+	d2[4] = "showtime.       "
+	
+	d3[1] = "i just want you "
+	d3[2] = "to know, i'm    "
+	d3[3] = "proud of how far"
+	d3[4] = "you've come. now"
+	d3[5] = "go out there and"
+	d3[6] = "get that gold!  "
+	
+	dec = {d1,d2,d3}
+	dec[0] = 3
+	
+	f1[1] = "nervous, kid? it"
+	f1[2] = "is your big day!"
+	f1[2] = "the whole world "
+	f1[3] = "is out there wat"
+	f1[4] = "-ching. don't   "
+	f1[5] = "disappoint them."
+	
+	f2[1] = "if you need a   "
+	f2[2] = "last minute drug"
+	f2[3] = "just let me know"
+	
+	fin = {f1,f2}
+	fin[0] = 2
+end
+
+
+function _drug()
+	
+	--used for debugging the coroutine
+	test[1] = "just testing the"
+	test[2] = "dialog iterator "
+	test[3] = "to check for any"
+	test[4] = "problems.       "
+	
+	--used as response for blood dope
+	druga[1] =	"alright, fair en"
+	druga[2] =	"-ough. not super"
+	druga[3] = "effective, but  "
+	druga[4] = "very hard to det"
+	druga[5] = "-ect."
+
+	--used as response for narcotic
+	drugb[1] = "good choice! a  "
+	drugb[2] = "painkiller will "
+	drugb[3] = "help you push yo"
+	drugb[4] = "-urself further!"
+	
+	--used as response for steroid
+	drugc[1] = "steroids are a  "
+	drugc[2] = "classic. be care"
+	drugc[3] = "-ful, though str"
+	drugc[4] = "-ong, it's also "
+	drugc[5] = "easy to detect. "
+	
+	--used as a response for no drug
+	nodrug[1]= "disappointing.  "
+	nodrug[2]= "sooner or later,"
+	nodrug[3]= "you're going to "
+	nodrug[4]= "have to do some "
+	nodrug[5]= "if you want to  "
+	nodrug[6]= "win."
+	
+	drugtestsoon[1]= "smart. there's  "
+	drugtestsoon[2]="going to be a te"
+	drugtestsoon[3]="-st soon, so bet"
+	drugtestsoon[4]="-ter stay clean "
+	drugtestsoon[5]="until then."
+
+	drug[0] = 5
+	drug[1] = druga
+	drug[2] = drugb
+	drug[3] = drugc
+	drug[4] = nodrug
+	drug[5] = drugtestsoon
+	
+	default[0] = 1
+	default[1] = test
+end
+__gfx__
+00000000000050001111111111111111000000000000000000000000000000000000000077777777700000000000000000000000000000000050500000000000
+00000000000858001111111111111111000000000000000000000000000000000000000007777777770000000000000000000000000000000005000000000000
+00700700000777001111111111111111000000000000000000000000000000000000000000700070007000000000000000000000000000000050500000000000
+00077000000858001111111111111111000000000000000000000000000000000000000000070007000700000000000000000000000000000000000000000000
+00077000000777001111111111111111000000000000000000000000000000000000000000007777777770000000000000000000000000005555555000000000
+00700700000858001111111111111111000000000000000000000000000000000000000000000777777777000000000000000000000000000555550000000000
+00000000000777001111111111111111000000000000000000000000000000000000000000000070007000700000000000000000000000000055500000000000
+00000000000858001111111111111111000000000000000000000000000000000000000000000007000700070000000000000000000000000005000000000000
+000000000000500011111111111111113333333300000000600000000000000000000000000000007777777770000000000000000000000000d0d00000000000
+0000000000005000111111111111111133333333000000000600000000000000000000000000000007777777770000000000000000000000000d000000000000
+000000000005050011111111111111113333333300000000006000000000000000000000000000000070007000700000000000000000000000d0d00000000000
+00000000055000553333333333333333333333330000000000060000000000000000000000000000000700070007000000000000000000000000000000000000
+0000000000000000666666666666666633333333000000000000600000000000000000000000000000007777777770000000000000000000ddddddd000000000
+00000000000000004444444444444444333333330000000000000600000000000000000000000000000007777777770000000000000000000ddddd0000000000
+000000000000000044444444444444443333333300000000000000600000000000000000000000000000007000700070000000000000000000ddd00000000000
+0000000000000000444444444444444433333333000000000000000600000000000000000000000000000007000700070000000000000000000d000000000000
+00000000000000004444444444444444444444440000000000000000600000000000000000000000000000007777777770000000000000000000000000000000
+00000000000000004444444444444444444444440000000000000000060000000000000000000000000000000777777777000000000000000000000000000000
+00000000000000004444444444444444444444440000000000000000006000000000000000000000000000000070007000700000000000000000000000000000
+00500000000000004444444444444444444444440000000000000000000600000000000000000000000000000000000000000000000000000000000000000000
+00500000000000004444444444444444444444440000000000000000000060000000000000000000000000000000000000000000000000000000000000000000
+00050087878780004444444444444444444444440000000000000000000006000000000000000000000000000000000000000000000000000000000000000000
+00005557575755004444444444444444444444440000000000000000000000600000000000000000000000000000000000000000000000000000000000000000
+00050087878780003333333333333333444444440000000000000000000000060000000000000000000000000000000000000000000000000000000000000000
+000000000000000000000000000000000000000000000000000000000000000060000000000000000600006006000060060000600600006006aaaa6000000000
+000000000000000000000000000000000000000000000000000000000000000006000000000000000600076006000760060007600600076006aaa76000000000
+0000000000000000000000000000000000000000000000000000000000000000006000000000000006000760060007600600076006aaa76006aaa76000000000
+0000000000000000000000000000000000000000000000000000000000000000000000000000000006000760060007600600076006aaa76006aaa76000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000060000600600006006aaaa6006aaaa6006aaaa6000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000060007600600076006aaa76006aaa76006aaa76000000000
+000000000000000000000000000000000000000000000000000000000000000000000000000000000600006006aaaa6006aaaa6006aaaa6006aaaa6000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000066666600666666006666660066666600666666000000000
+00555000005550000055500000555000005550000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+055f0000055f0000055f0000055f0000055f00000000000000000000000000000000000000000000000000000007700000000000000000000000000000000000
+0ffcf0000ffcf0000ffcf0000ffcf0000ffcf0000000000000000000000000000777770000000000000000000077670000770000000000000000000000000000
+05ff000005ff000005ff000005ff000005ff0f000000000000000000000000077777777700000000000000007776666000000000000000000000000000000000
+0cc720000cc7f00000c700000cc700000cc722000000000000000007777777776666777770000000000000000000000000000700000000000000000000000000
+0fccf0000ffc000000ff00000fccf000f0cc00000000000000000777777777766666677777000000000000000000000000000000000000000000000000000000
+00cc000000cc000000cc000000fc000000cc00000000000000000777777777777666677777000000000000000000066000000000000000000000000000000000
+00dd000000dd0000001dd000001d000001ddd0000000000000007777767777776766667777700000000000000000000000000000000000000000000000000000
+00d10000011dd00011100d00011dd00011000d000000007777007777776777777666666677700000000000000000000000000000000000000000000000000000
+00d100001100d000000000001100d000000000000000777777777777777677777666666677770000000000000007777000077700000000000000000000000000
+00000000000000000000000000000000000000000000777777777777777677776666666667777000000000000777777700777770000000000000000000000000
+00000000000000000000000000000000000000000007777777777777776777777777666666777700000000007767766700776670000000000000000000000000
+00000000000000000000000000000000000000000077777777777777777777777777766666667770000000000776677000076667000000000000000000000000
+00000000000000000000000000000000000000007777777777777777777777777777777777777777770700000077700077776666000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00001111111000000000333333300000000222222200000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00001111111000000000333333300000000222222200000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00001111111000000000333333300000000222222200000000000000ccccc0000cccc00ccccc000cccccc0880000088888808888880888888000000000000000
+00001111111000000000333333300000000222222200000000000000cccccc00cc55cc0cccccc00cccccc0880000088888808888880888888000000000000000
+0000011c110000000000033b33000000000022822000000000000000cc55cc00cc00cc0ccc55cc0cc55550880000055885505588550885555000000000000000
+000001c1c1000000000003b3b3000000000028282000000000000000cc005cc0cc00cc0ccc00cc0cc00000880000000880000088000880000000000000000000
+00000c1c1c00000000000b3b3b000000000082828000000000000000cc000cc0cc00cc0cccccc50ccc8c80880000000880000088000888888000000000000000
+000000c1c0000000000000b3b0000000000008280000000000000000cc000cc0cc00cc0ccccc5002c8c880880000000880000088000888888000000000000000
+00000099900000000000005550000000000004440000000000000000cc000cc0cc00cc0cc555000c855550880000000880000088000885555000000000000000
+000009a9a90000000000056665000000000049994000000000000000cc00cc50cc00cc0cc0000008c00000880000000880000088000880000000000000000000
+00009a99aa9000000000565566500000000494449400000000000000cccccc00cccccc0cc000000d888880888888088888800088000888888000000000000000
+00009aa9aa9000000000566566500000000494999400000000000000ccccc5005cccc50cc00000088d8880888888088888800088000888888000000000000000
+00009aa9aa9000000000566556500000000494449400000000000000555550000555500550000005555550555555055555500055000555555000000000000000
+000009a9a90000000000056665000000000049994000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000099900000000000005550000000000004440000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+66666666666666555555555555555555666666666666666600000000000000000000000000000000000000000000000000000000000000000000000000000000
+11161111611116655555555555555555622226222262222600000000000000000000000000000000000000000000000000000000000000000000000000000000
+00161001610016665555555555555555620026200262002600000000000004444444000000000000000000000000000000000000000000000000000000000000
+11161111611116666555555555555556622226222262222600000000000044444444440000000000000000000000000000000000000000000000000000000000
+115611156111566666cccccccccccc66622256222562225600000000000044444444400000000000000000000000000000000000000000000000000000000000
+115611156111566666cccccccccccc66622256222562225600000000000444444444440000000000000000000000000000000000000000000000000000000000
+111611116111166666cccccccccccc6662222622226222260000000000044ffff444440000000000000000000000000000000000000000000000000000000000
+111611116111166666cccccccccccc666222262222622226000000000004ffffff44f40000000000000000000000000000000000000000000000000000000000
+666666666666666666cccccccccccc666666666666666666000000000004f444f444f40000000000000000000000000000000000000000000000000000000000
+111611116111166666cccccccccccc666222262222622226000000000000f7c7f7c7400000000000000000000000000000000000000000000000000000000000
+001610016100166666cccccccccccc666200262002620026000000000000fffffffff00000000000000000000000000000000000000000000000000000000000
+111611116111166666cccccccccccc6662222622226222260000000000004fff9fff400000000000000000000000000000000000000000000000000000000000
+1156111561115666663333333333336662225622256222560000000000000ffeeeff000000000000000000000000000000000000000000000000000000000000
+11561115611156666644444444444466622256222562225600000000000000fffff0000000000000000000000000000000000000000000000000000000000000
+111611116111166666444444444444666222262222622226000000000000089fff98000000000000000000000000000000000000000000000000000000000000
+11161111611116666644444444444466622226222262222600000000000888999998880000000000000000000000000000000000000000000000000000000000
+666666666666666665dddddddddddd56666666666666666600000000008888899988888000000000000000000000000000000000000000000000000000000000
+55555555555555555dddddddddddddd5555555555555555500f00000088888888888888800000000000000000000000000000000000000000000000000000000
+dddddddddddddddddddddddddddddddddddddddddddddddd00f00000088888888888888800000000000000000000000000000000000000000000000000000000
+dddddddddddddddddddddddddddddddddddddddddddddddd00ff0f00888888888888888880000000000000000000000000000000000000000000000000000000
+ddddddddddddddddddddddddddddddddddddddddddddddddf0ffff000fff888888888fff00000000000000000000000000000000000000000000000000000000
+dddddddddddddddddddddddddddddddddddddddddddddddd0fffff00fffff8888888fffff0000000000000000000000000000000000000000000000000000000
+dddddddddddddddddddddddddddddddddddddddddddddddd00ffff0ffffff88888880fffff000000000000000000000000000000000000000000000000000000
+dddddddddddddddddddddddddddddddddddddddddddddddd000fffffffff0888888800fffff00000000000000000000000000000000000000000000000000000
+dddddddddddddddd000000000000000000000000000000000000fffffff008222228000fffff0000000000000000000000000000000000000000000000000000
+dddddddddddddddd0000000000000000000000000000000000000fffff00888222888000ffff0000000000000000000000000000000000000000000000000000
+dddddddddddddddd00000000000000000000000000000000000000fff00088882888800fffff0000000000000000000000000000000000000000000000000000
+dddddddddddddddd0000000000000000000000000000000000000000000088888888800ffff00000000000000000000000000000000000000000000000000000
+dddddddddddddddd000000000000000000000000000000000000000000008888888880ffff000000000000000000000000000000000000000000000000000000
+dddddddddddddddd00000000000000000000000000000000000000000000044464440ffff0000000000000000000000000000000000000000000000000000000
+dddddddddddddddd00000000000000000000000000000000000000000000111111111ffff0000000000000000000000000000000000000000000000000000000
+dddddddddddddddd0000000000000000000000000000000000000000000111111111110ff0000000000000000000000000000000000000000000000000000000
+0000000000080000000000000000000000000000000000000000000000011111111111ff00000000000000007777777777777777777777000000000000000000
+00000000000800000000000000000000000000000000000000000000000111101011110000000000000000077777777777777777777777700000000000000000
+00000000000800000000000000000000000000000000000000000000000111110111110000000000000000777777777777777777777777770000000000000000
+00000000000800000000000000000000000000000000000000000000000111110111110000000000000000777777777777777777777777770000000000000000
+00000000800800800000000000000000000000000000000000000000001111110111111000000000000000777777777777777777777777770000000000000000
+00000000080808000000000000000000000000000000000000000000001111110111111000000000000000777777777777777777777777770000000000000000
+00000000008880000000000000000000000000000000000000000000001111110111111000000000000000777777777777777777777777770000000000000000
+00000000000800000000000000000000000000000000000000000000001111110111111000000000000000777777777777777777777777770000000000000000
+00000000000c00000000000000000000000000000000000000000000001111110111111000000000000000777777777777777777777777770000000000000077
+0000000000ccc0000000000000000000000000000000000000000000001111110111111000000000000000777777777777777777777777770000000000000077
+000000000c0c0c000000000000000000000000000000000000000000011111110111111100000000000000777777777777777777777777770000000000000077
+00000000c00c00c00000000000000000000000000000000000000000011111110111111100000000000000777777777777777777777777770000000000000077
+00000000000c00000000000000000000000000000000000000000000011111110111111100000000000000777777777777777777777777770000000000000077
+00000000000c00000000000000000000000000000000000000000000011111110111111100000000000007777777777777777777777777770000000000000077
+00000000000c00000000000000000000000000000000000000000000011111110111111100000000000077777777777777777777777777770000000000000077
+00000000000c00000000000000000000000000000000000000000000011111110111111100000000000777777777777777777777777777770000000000000077
+00000000000c00000000000000000000000000000000000000000000111111110111111100000000007777777777777777777777777777770000000000000000
+0000000000c000000000000000000000000000000000000000000000111111110111111110000000077777777777777777777777777777770000000000000000
+000000000c0000000000000000000000000000000000000000000000111111110111111110000000000777777777777777777777777777770000000000000000
+00000000cccccccc0000000000000000000000000000000000000000788887700077788870000000000007777777777777777777777777770000000000000000
+000000000c0000000000000000000000000000000000000000000077888887700077788887700000000000777777777777777777777777770000000000000000
+0000000000c000000000000000000000000000000000000000000777888887700077788887770000000000777777777777777777777777670000000000000000
+00000000000c00000000000000000000000000000000000000000777777777700077777777770000000000777777777777777777777777770000000000000000
+00000000000000000000000000000000000000000000000000000555555555500055555555550000000000777777777777777777777777670000000000000000
+000000000000c0000000000000000000000000000000000000000000000000000000000000000000000000777777777777777777777777670000000000000000
+0000000000000c000000000000000000000000000000000000000000000000000000000000000000000000777777777777777777777777770000000000000000
+00000000000000c00000000000000000000000000000000000000000000000000000000000000000000000777777777777777777777777670000000000000000
+00000000cccccccc0000000000000000000000000000000000000000000000000000000000000000000000777777777777777777777776670000000000000000
+00000000000000c00000000000000000000000000000000000000000000000000000000000000000000000777777777777777777777766670000000000000000
+0000000000000c000000000000000000000000000000000000000000000000000000000000000000000000777777777777777777777666770000000000000000
+000000000000c0000000000000000000000000000000000000000000000000000000000000000000000000077777777777777777766677700000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000000000000000000000007777777777777777777777000000000000000000
+__map__
+0202020202020202020202020202020218181800181fb1b1b1b1b1b1cacbcbcbcbdddcddcd00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0202020202030303030303030303020218181818181f808182838485dfccccdddcdddcdddd00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+1213131212131213121313121312121318181818181f909192939495dfdddddddcdddcdddd00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+2424242424242424242424242424242418181818181fa0a1a2a3a4a5dfccccdddcdddcdddd00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+2222222222222222222222222223232318181818181fb0b0b0b0b0b0dadbdcdddcdddcdddd00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+1414141414141414141414141414141418181818181fb0b0b0b0b0b0eaebecdddcdddcdded00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+1414141414141414141414141414141418181818181fb0b0b0b0b0b0fafbfcdddcdddcddfd00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000018181818181fb0b0b0b0b0b0ffffffffffffff000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000018181818181fb0b0b0b0b0b0fefefefefefeff000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000b0b0b0b0b0b000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000b0b0b0b0b0b0ab000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000b0b0b0b0b0b000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000000000005e00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000000000005e00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+005e000000005e0000005e000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000

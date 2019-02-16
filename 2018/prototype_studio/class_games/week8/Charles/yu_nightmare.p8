@@ -1,0 +1,907 @@
+pico-8 cartridge // http://www.pico-8.com
+version 16
+__lua__
+--state 0: wrapper for the game
+-------------------------------
+state = 1
+
+mes = {}
+por = {2,40,8,42,10,44,12}
+
+--assigns all messages
+function _init()
+	mes[1] = test
+	mes[2] = p1
+	mes[3] = p2
+	mes[4] = p3
+	mes[5] = p4
+	mes[6] = p5
+	mes[7] = p6
+
+end
+
+
+function _update60()
+	if(state == 1) then
+		up1()
+	elseif(state == 2) then
+		up2()
+	elseif(state == 3) then
+		up3()
+	end
+end
+
+--sprites drawn here
+function _draw()
+	cls()
+
+	--picks which draw func to
+	--execute based on state
+	if(state == 1) then
+		d1()
+	elseif(state == 2) then
+		d2()
+	elseif(state == 3) then
+		d3()
+	end
+end
+-->8
+--state 1: main game handled here
+--------------------------------
+mes = {}
+
+mindex = 1
+entry = 0
+health = 60
+maxh = 60
+chocie = 0
+hide = false
+
+function up1()
+
+--allows the player to hide
+--the options box
+if(btnp(5,0) or btnp(6,0)) then
+	if(hide == false) then
+		hide = true
+	else
+		hide = false
+	end
+end
+
+--if player has yet to choose
+if(entry == 0) then
+	--swipe left: next profile 
+	if(btnp(0,0)) then
+		mindex+= 1
+		mesfinished = false
+		started = false
+		text = {}
+		
+		--cycle again
+		if(mindex >= 8) then
+			mindex = 2
+		end
+	end
+	
+	--must not be on title screen
+	if(mindex > 1) then
+		--right: normal like
+		if(btnp(1,0)) then
+ 		entry = 1
+		end	
+	
+		--up: super like
+		if(btnp(2,0)) then
+			entry = 2
+		end
+	
+		--down: give up
+		if(btnp(3,0)) then
+			entry = 3
+		end
+	end
+
+--if the player has super liked
+elseif(entry == 2) then
+
+		--left: "not really"
+	if(btnp(0,0)) then
+			entry = 0
+		health -= 10
+	end
+	
+	--right: "yeah kinda"
+	if(btnp(1,0)) then
+		entry = 1
+	end	
+	
+	--up: "oh god no!"
+	if(btnp(2,0)) then
+		entry = 0
+		health -= 20
+	end
+	
+	--down: "yes; completely"
+	if(btnp(3,0)) then
+			entry = 1
+	end
+
+
+--player has liked, and will
+--send a message
+elseif(entry == 1) then
+
+		--left: personal question
+	if(btnp(0,0)) then
+		choice = 3
+		state = 2
+	end
+	
+	--right: pick-up line
+	if(btnp(1,0)) then
+		choice = 2
+		state = 2
+	end	
+	
+	--up: "hey"
+	if(btnp(2,0)) then
+		choice = 1
+		state = 2
+	end
+	
+	--down: wait on them
+	if(btnp(3,0)) then
+			ending = 7
+			state = 3
+	end
+	
+--giving up and closing tnr
+elseif (entry == 3) then
+	
+		--left: for a while
+	if(btnp(0,0)) then
+		if(health > maxh*0.85) then
+			ending = 0
+		elseif(health > maxh*0.45) then
+			ending = 1
+		else
+			ending = 2
+		end
+		state = 3
+	end
+	
+	--right: just for now
+	if(btnp(1,0)) then
+		if(health > maxh*0.9) then
+			ending = 3
+		elseif(health > maxh*0.5) then
+			ending = 0
+		else
+			ending = 2
+		end
+		state = 3
+	end	
+	
+	--up: actually no
+	if(btnp(2,0)) then
+		health -= 0.5
+		entry = 0
+	end
+	
+	--down: forever
+	if(btnp(3,0)) then
+		ending = 6
+		state = 3
+	end
+end
+
+--health decreases over time
+health-= (0.25/60)
+
+if(health < 0) then
+	ending = 4
+	state = 3
+end
+end
+
+--draws cell, and stuff under it
+function d1()
+	palt(11,true)
+	palt(0,false)
+		
+	--prints negative thoughts
+	if(ceil(health) < (maxh-3)) then
+		for i=1,(maxh-3)-ceil(health) do
+			_printthought(t,1,i)
+		end
+	end
+	
+	map(0,0,0,0,124,124)
+	
+--	print("they are probably too good for you",
+--	6,12,6)
+	
+	--cell phone & arm drawn last
+	spr(33,0,80,3,2)
+	spr(4,24,64,4,4)
+	spr(por[mindex],32,72,2,2)
+	
+	_printmes(4,5,mes[mindex], true)
+
+	
+	--options are drawn based on
+	--the current state
+	if(hide == false) then
+	if(entry == 0) then
+		sspr(9,8,2,2,58,30,69,70)
+		print("you can use tnr",66,32,12)
+		print("with the keys",66,40,12)
+		print("shown below!",66,48,12)
+		_drawoptions(o1)
+		print("'x' to hide",71,102,7)
+	else
+		
+		--super like options
+		if(entry == 2) then
+		sspr(9,8,2,2,58,30,69,70)
+		print("a super-like!?",66,32,12)
+		print("did you mean to",66,40,12)
+		print("do that!?",66,48,12)
+			_drawoptions(o2)
+		print("'x' to hide",71,102,7)
+		end
+		
+		--like options
+		if(entry == 1) then
+		sspr(9,8,2,2,58,30,69,70)
+		print("okay, so what",66,32,12)
+		print("do you want to ",66,40,12)
+		print("say to them?",66,48,12)
+			_drawoptions(o3)
+		print("'x' to hide",71,102,7)
+		end
+		--quit options
+		if(entry == 3) then
+		sspr(9,8,2,2,58,30,69,70)
+		print("how long do you",66,32,12)
+		print("want to quit",66,40,12)
+		print("using tnr?",66,48,12)
+			_drawoptions(o4)
+		print("'x' to hide",71,102,7)
+		end
+	end
+	end
+	
+		spr(16,12,112,1,1)
+		for i=0,2 do
+			line(21,114+i,21+(health*2),114+i,14)
+		end
+end
+
+--draws player input options
+function _drawoptions(m)
+	
+	--first draws arrows
+	spr(64,60,64,1,1)
+	spr(112,59,73,1,1)
+	spr(96,59,82,1,1)
+	spr(80,60,91,1,1)
+	
+	--print options message
+	print(m[1],69,64,8)
+	print(m[2],69,73,14)
+	print(m[3],69,82,13)
+	print(m[4],69,91,2)
+
+end
+-->8
+--text display code here
+-------------------------------
+text = {}
+started = false
+mesfinished = false
+cotimer = 0
+
+tstarted = {}
+tmesfinished = {}
+tcotimer = {}
+tcor = {}
+
+--takes starting x,y pos, and 
+--a string table, m
+function _printmes(x,y,m,p)
+
+	if(started == false) then
+	
+		cor = cocreate(_diag)
+		coresume(cor,m,m[0],16)
+
+		started = true
+	end
+	
+	if(cotimer <=0) and
+		(costatus(cor) ~= 'dead') then
+			coresume(cor)
+			cotimer = 2
+	elseif(costatus(cor) == 'dead') then
+			mesfinished = true
+	end
+	
+	cotimer -= 1
+
+
+--writes dialog here
+	for i=1,m[0] do
+ 	if(text[i]) then
+ 	
+ 		if(p == true) then
+ 			if(i == 1) then
+ 				print(text[i],x,y+(7*i),8)
+ 			elseif(i == 2) then
+ 				print(text[i],x,y+(7*i),13)
+ 			else
+ 				print(text[i],x,y+(7*i),0)
+ 			end
+ 		else
+ 			print(text[i],x,y+(7*i),7)
+ 		end
+ 	end
+	end
+end
+
+--co-routine for printing dialog
+function _diag(m,n,l) 
+	
+	--while there are lines left to print...
+	for i=1,n do
+	
+		--for each character in the line...
+		for j=1,l do		
+			text[i] = sub(m[i],1,j)
+			yield()
+		end
+	end
+	mesfinished = true
+	yield()
+end
+
+--co-routine for printing thoughts
+function _thoughts(m,n) 
+	
+	--while there are lines left to print...
+	for i=1,n do
+	
+		local xl = rnd(60)
+		local yl = rnd(100)
+		
+		--for each character in the line...
+		for j=1,50 do	
+			if(i < 15) then	
+				print(sub(m[i],1,j),xl,yl,13)
+			else
+				print(sub(m[i],j-15,j),xl,yl,13)
+			end
+			yield()
+		end
+	end
+	yield()
+end
+
+--takes starting x,y pos, and 
+--a string table, m
+function _printthought(m,off,ad)
+
+	if(tstarted[ad] == false) or
+	(tstarted[ad] == nil) then
+	
+		tcor[ad] = cocreate(_thoughts)
+		coresume(tcor[ad],m,m[0],ad)
+
+		tstarted[ad] = true
+		tcotimer[ad] = 0
+	end
+	
+	if(tcotimer[ad] <=0) and
+		(costatus(tcor[ad]) ~= 'dead') then
+			coresume(tcor[ad])
+			tcotimer[ad] = 1+off
+	elseif(costatus(tcor[ad]) == 'dead') then
+			tstarted[ad] = false
+	end
+	
+	tcotimer[ad] -= 1
+end
+-->8
+--text messages written here
+-------------------------------
+--intro message
+test = {"welcome to tnr!",
+"***************",
+"swipe left to",
+"begin browsing",
+"profiles!"}
+test[0] = 5
+
+--options 1: standard
+o1 = {": superlike",
+": like profile",
+": next profile",
+": quit tnr"}
+
+--options 2: superlike
+o2 = {": oh god no!",
+": yeah, kinda.",
+": not really.",
+": yes; completely."}
+
+--options 3: like
+o3 = {": 'hey.'",
+": pick-up line",
+": ask question",
+": wait on them"}
+
+--options 4: quit
+o4 = {": actually, no",
+": just for now.",
+": for a while",
+": forever."}
+
+
+
+--profile 1
+p1 = {"m. mercer",
+"male, 23",
+"i figure theres",
+"a good chance",
+"i'm as lonely",
+"as you."}
+p1[0] = 6
+
+--profile 2
+p2 = {"j. lanely",
+"female, 21",
+"i guess i like",
+"movies and",
+"stuff."}
+p2[0] = 6
+
+--profile 3
+p3 = {"l. wang",
+"male, 19",
+"just looking",
+"for a fling, so",
+"no dinner date."}
+p3[0] = 6
+
+--profile 4
+p4 = {"s. gupta",
+"female, 20",
+"i probably just",
+"liked you for",
+"your dog."}
+p4[0] = 6
+
+--profile 5
+p5 = {"m. brown",
+"male, 25",
+"please feel",
+"free to like",
+"me for my dog."}
+p5[0] = 6
+
+--profile 6
+p6 = {"a. conway",
+"female, 24",
+"mostly i'm just",
+"tired of sleep",
+"-ing alone."}
+p6[0] = 6
+
+--thoughts
+t = {
+"i'm not good enough...",
+"i don't deserve anyone...",
+"they're probably out of my league...",
+"i don't look very good...",
+"i'm not very fun...",
+"i'm still virgin...",
+"i'll look like an idiot...",
+"this feels a little creepy...",
+"i don't know about this..."}
+t[0] = 10
+
+
+
+-->8
+--state 2: messages live
+-------------------------------
+curstep = 0
+pnext = 1
+
+--press any arrow to advance
+function up2()
+	if(btnp(0,0) or btnp(1,0) 
+	or btnp(2,0) or btnp(3,0)) then
+			curstep += 1
+	end
+end
+
+--displays different dialogues
+--based on "choice"
+function d2()
+	palt(11,true)
+	sspr(32,0,32,32,-32,-23,192,192)
+
+	--shows next message as ellipses
+	if(pnext==1) then
+		spr(66,86,8 + (20*curstep),1,2)
+		sspr(16,48,3,3,94,8 + (20*curstep),8,16)
+		spr(67,102,8 + (20*curstep),1,3)
+		print("...",93,13+ (20*curstep),7)
+	elseif(pnext == 2) then
+		spr(69,18,8 + (20*curstep),1,3)
+		sspr(48,48,3,3,26,8 + (20*curstep),8,16)
+		spr(70,34,8 + (20*curstep),1,2)
+		print("...",25,13+ (20*curstep),0)
+	end
+
+--dialogue following "hey"
+if(choice == 1) then
+	--"hey"
+	if(curstep >= 1) then
+		if(curstep == 1) then
+			pnext = 2
+		end
+		spr(66,86,8,1,2)
+		sspr(16,48,3,3,94,8,8,16)
+		spr(67,102,8,1,3)
+		print("hey",93,13,7)
+	end
+	
+	--"no"
+	if(curstep >= 2) then
+		if(curstep == 2) then
+			pnext = 1
+		end
+		spr(69,18,28,1,3)
+		sspr(48,48,3,3,26,28,8,16)
+		spr(70,34,28,1,2)
+		print("no",25,33,0)
+	end
+	
+		-- :(
+	if(curstep >= 3) then
+		pnext = 3
+		spr(66,86,48,1,2)
+		sspr(16,48,3,3,94,48,8,16)
+		spr(67,102,48,1,3)
+		print(":(",93,53,7)
+	end
+
+	--back to tnr
+	if(curstep >= 4) then
+		entry = 0
+		curstep = 0
+		health -= 10
+		state = 1
+	end
+
+--dialogue following pickup line
+elseif(choice == 2) then
+	--"if you were a fruit"
+	if(curstep >= 1) then
+		if(curstep == 1) then
+			pnext = 1
+		end
+		spr(66,31,8,1,2)
+		sspr(16,48,3,3,36,8,70,16)
+		spr(67,102,8,1,3)
+		print("if you were a fruit",33,13,7)
+	end
+	
+	--you'd be a fineapple!"
+	if(curstep >= 2) then
+		if(curstep == 2) then
+			pnext = 1
+		end
+		spr(66,24,28,1,2)
+		sspr(16,48,3,3,30,28,76,16)
+		spr(67,102,28,1,3)
+		print("you'd be a fineapple!",26,33,7)
+	end
+	
+	-- ;d
+	if(curstep >= 3) then
+		if(curstep == 3) then
+			pnext = 2
+		end
+		spr(66,86,48,1,2)
+		sspr(16,48,3,3,94,48,8,16)
+		spr(67,102,48,1,3)
+		print(";d",93,53,7)
+	end
+	
+	-- k
+	if(curstep >= 4) then
+		if(curstep == 4) then
+			pnext = 1
+		end		
+		spr(69,18,68,1,3)
+		sspr(48,48,3,3,26,68,8,16)
+		spr(70,34,68,1,2)
+		print("k.",25,73,0)
+	end
+	
+			-- :(
+	if(curstep >= 5) then
+		pnext = 3
+		spr(66,86,88,1,2)
+		sspr(16,48,3,3,94,88,8,16)
+		spr(67,102,88,1,3)
+		print(":(",93,93,7)
+	end
+
+	--back to tnr
+	if(curstep >= 6) then
+		entry = 0
+		curstep = 0
+		health -= 10
+		state = 1
+	end
+
+--question
+elseif(choice == 3) then
+
+	--"what kind of guy"
+	if(curstep >= 1) then
+		if(curstep == 1) then
+			pnext = 1
+		end
+		spr(66,31,8,1,2)
+		sspr(16,48,3,3,36,8,70,16)
+		spr(67,102,8,1,3)
+		print("what kind of guy",36,13,7)
+	end
+	
+	--are you looking for?"
+	if(curstep >= 2) then
+		if(curstep == 2) then
+			pnext = 2
+		end
+		spr(66,24,28,1,2)
+		sspr(16,48,3,3,30,28,76,16)
+		spr(67,102,28,1,3)
+		print("are you looking for?",26,33,7)
+	end
+	
+		-- "not you"
+	if(curstep >= 3) then
+		if(curstep == 3) then
+			pnext = 2
+		end		
+		spr(69,18,48,1,3)
+		sspr(48,48,3,3,26,48,30,16)
+		spr(70,50,48,1,2)
+		print("not you.",23,53,0)
+	end
+end
+
+	-- "fuck off, boy."
+	if(curstep >= 4) and
+	(choice == 3) then
+		if(curstep == 4) then
+			pnext = 1
+		end		
+		spr(69,18,68,1,3)
+		sspr(48,48,3,3,26,68,70,16)
+		spr(70,96,68,1,2)
+		print("fuck off, bitch boy.",23,73,0)
+	end
+
+			-- :(
+	if(curstep >= 5)and
+	(choice == 3) then
+		pnext = 3
+		spr(66,86,88,1,2)
+		sspr(16,48,3,3,94,88,8,16)
+		spr(67,102,88,1,3)
+		print(":(",93,93,7)
+	end
+
+	--straight to ending
+	if(curstep >= 6)and
+	(choice == 3) then
+		ending = 5
+		state = 3
+	end
+end
+-->8
+--state 3: endings
+-------------------------------
+ending = 1
+
+function up3()
+end
+
+--writes an ending based on
+--various factors
+function d3()
+
+	--broken heart decor
+	palt(11, true)
+	print("game over",46,32,7)
+	spr(32,56,39,1,1)
+	spr(48,64,39,1,1)
+	print("ending "..tostr(ending+1),
+	48,49,14)
+	
+	--basic quit - high esteem
+	if(ending == 0) then
+	print("realizing that you have no", 13,60,2)
+	print("real appealing qualities,",13,68,2)
+	print("you decide that finding",13,76,2)
+	print("love will likely be a fru-",13,84,2)
+	print("itless endeavor, and you",13,92,2)
+	print("decide to give up.",13,100,2)
+	end
+	
+	--basic quit - mid esteem
+	if(ending == 1) then
+	print("after all attempts failed", 13,60,2)
+	print("you become disheartened,",13,68,2)
+	print("eventually uninstalling",13,76,2)
+	print("tnr, and spending the rest",13,84,2)
+	print("of your days in complete",13,92,2)
+	print("seclusion.",13,100,2)
+	end
+	
+	--basic quit - low esteem
+	if(ending == 2) then
+	print("feeling numb and empty on", 13,60,2)
+	print("the inside, you finally",13,68,2)
+	print("give up your search. in",13,76,2)
+	print("the days that follow, you",13,84,2)
+	print("slowly learn to accept",13,92,2)
+	print("life as a hermit.",13,100,2)
+	end
+	
+	--temp quit - high esteem
+	if(ending == 3) then
+	print("uncomfortable with the", 13,60,2)
+	print("idea of judging by photos,",13,68,2)
+	print("and uncertain of what you",13,76,2)
+	print("want, you resolve to put",13,84,2)
+	print("down tnr, and come back at",13,92,2)
+	print("a later date.",13,100,2)
+	end
+	
+	--esteem less than 0
+	if(ending == 4) then
+	print("heartbroken and in tears,", 13,60,2)
+	print("you throw away your phone,",13,68,2)
+	print("whiling away the rest of",13,76,2)
+	print("your short, lonely life at",13,84,2)
+	print("the bottom of a tub of ice",13,92,2)
+	print("cream.",13,100,2)
+	end
+	
+	--harsh rejection
+	if(ending == 5) then
+	print("the rejection you ended up", 13,60,2)
+	print("recieving was what you'd",13,68,2)
+	print("always feared: a burn so",13,76,2)
+	print("bad it tore into your very",13,84,2)
+	print("soul and ripped out what",13,92,2)
+	print("little esteem you had.",13,100,2)
+	end
+	
+	--forever quit
+	if(ending == 6) then
+	print("understanding your own lack", 13,60,2)
+	print("of charisma, you decide to",13,68,2)
+	print("resign yourself to lonlin-",13,76,2)
+	print("ess. it is a strangely",13,84,2)
+	print("peaceful decision, that ",13,92,2)
+	print("still leaves you empty.",13,100,2)
+	end
+	
+	--wait
+	if(ending == 7) then
+	print("waiting on a text that", 13,60,2)
+	print("never came, you persist in",13,68,2)
+	print("your vigil, too stubborn",13,76,2)
+	print("and invested to see the",13,84,2)
+	print("folly in waiting. ",13,92,2)
+	end
+end
+__gfx__
+bbbbbbbbbbbbbbbb7777788888877777bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb71110000000111177dd000040000ddd77eeeeaaaaaaeeee7bb777777777777bb
+bbbbbbbbbbbbbbbb7777888878887777bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb71000000000011177d00044440000dd77eeeaaaaaaaa9ee7b77777777777777b
+bb7bb7bbbbbbbbbb7777888887887777bbbbbb55555555555555555555bbbbbb70000000000011177d00444844000dd77eeaa77777aa9ee77777777777777777
+bbb77bbbbbbbbbbb7727888787887277bbbbbb55555555555555555555bbbbbb70000ff0fff101177d04444444400dd77eeaa77757aaa9e77777777777777777
+bbb77bbbbbbbbbbb7277887777887727bbbbbb55777777777777777755bbbbbb7000000fff1101177d04000400040dd77eeea7557a7aa9e77777777777777777
+bb7bb7bbbbbbbbbb7727887777887277bbbbbb55777777777777777755bbbbbb7000ff555f1111177d04794449740dd77eeee777777aa9e77777777777777777
+bbbbbbbbbbbbbbbb7777888778887777bbbbbb55777777777777777755bbbbbb7000fff7cf1111177d04444544400dd77eee777777faa9e77777777777777777
+bbbbbbbbbbbbbbbb7777788888877777bbbb7ff5777777777777777755bbbbbb70000ffffff111177d00484444400dd77eeee88777faa9e77777777777777777
+b88b88bb111111117777777777777777bbbbfff5777777777777777755bbbbbb710000ffff1111177d00448844000dd77eeeee777faa99e77777777777777777
+8888888b111111117700070770700777bbbbfff5777777777777777755bbbbbb7122000f811111177d06644440000dd77eeeeeeefaaa9ee77777777777777777
+8e88888b111111117770770070707077bbbbfff5777777777777777755ffbbbb72222000111111177666666666000dd77eeeee222a992ee77777777777777777
+8e88888b111111117770770700700777bbbffff577777777777777775ffffbbb7777777777777777777777777777777777777777777777777777777777777777
+b8e888bb111111117770770770707077bbbffff577777777777777775ffffbbb7878777c777777377878777c777777377878777c777777377777777777777777
+bb888bbb111111117777777777777777bbbffff577777777777777775ffffbbb778777ccc7737377778777ccc7737377778777ccc77373777777777777777777
+bbb8bbbb111111117777777777777777bbbffff5777777777777777755ffbbbb7878777c777737777878777c777737777878777c77773777b777777777777777
+bbbbbbbb111111117777777777777777bbbffff5777777777777777755dbbbbb777777777777777777777777777777777777777777777777bb77777777777777
+bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbfffff5777777777777777755ffbbbb7c99ffff9f99ccc772220000000022277555555555999f9777777bbb77777777
+b88bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbfffff5577777777777777775ffffbbb7c9ffeffff999cc772200000fff0222775555555559ffff77777bbbb77777777
+8888bbbbbbbbbbbbbbbbbbbbbbbbbbbfffffff5577777777777777775ffffbbb7c99fe999f9f9cc772200000fff2022775555577744499f7777bbbbb77777777
+8e888bbbbbbbbbbbbbbbbbbbbbbbbbffffffff5577777777777777775ffffbbb7cc3fe737fff9cc77220f0f555f22227755557777444c7f777bbbbbb77777777
+8e88bbbbffffffffffffffffffffffffffffff55777777777777777755ffbbbb7ccfeffffff99cc77220ffff47f222277555577074444ff77bbbbbbb77777777
+b8e88bbbffffffffffffffffffffffffffffff55777777777777777755dbbbbb7ccffffeff999cc772200fffffff22277550777777444997bbbbbbbb77777777
+bb8888bbffffffffffffffffffffffdfffffff55777777777777777755ffbbbb7cccfeeffe9cccc7722200fffef222277557777777744977bbbbbbbb7777777b
+bbbbbb8bffffffffffffffffffffffdfffffff5577777777777777775ffffbbb7cccffffee3cccc77222cddfffe2222775557e8777777dd7bbbbbbbb777777bb
+bbbbbbbbfffffffffffffffffffffffdfffffd5577777777777777775ffffbbb7ccc3eeee333ccc7722cccdddd22222775555e857777f7d7bbbbbbbbbbbbbbbb
+bbb88bbbffffffffffffffffddddddddffffdd5555555555555555555ffffbbb7cc33eee33333cc772ccccccccc222277555555df7777f27bbbbbbbbbbbbbbbb
+bb8888bbfffffffffffddddddddddddddddddd55555555566655555555ffbbbb7c33333333333cc77cccccccccc222277555555df7ffff27bbbbbbbbbbbbbbbb
+b88888bbffffffffdddddddddddddddddddddd5555555566d665555555bbbbbb777777777777777777777777777777777777777777777777bbbbbbbbbbbbbbbb
+bb8888bbdddddddddddddddddddddddddddddd555555556d6d6555555fffbbbb7878777c777777377878777c777777377878777c77777737bbbbbbbbbbbbbbbb
+b8888bbbdddddddddddddddddddddddddddddd5555555566d6655555ffffbbbb778777ccc7737377778777ccc7737377778777ccc7737377bbbbbbbbbbbbbbbb
+b888bbbbdddddddddddddddbbbbbbbbbddddddd55555555666555555ffffbbbb7878777c777737777878777c777737777878777c77773777bbbbbbbbbbbbbbbb
+8bbbbbbbddddddddddbbbbbbbbbbbbbbbdddddd55555555555555555ffffbbbb777777777777777777777777777777777777777777777777bbbbbbbbbbbbbbbb
+bbb8bbbbbbbbbbbbbbccccccccccccbb00000000bb666666666666bb000000000000000000000000000000000000000000000000000000000000000000000000
+bb888bbbbbbbbbbbbccccccccccccccb00000000b66666666666666b000000000000000000000000000000000000000000000000000000000000000000000000
+b8b8b8bbbbbbbbbbcccccccccccccccc000000006666666666666666000000000000000000000000000000000000000000000000000000000000000000000000
+8bb8bb8bbbbbbbbbcccccccccccccccc000000006666666666666666000000000000000000000000000000000000000000000000000000000000000000000000
+bbb8bbbbbbbbbbbbcccccccccccccccc000000006666666666666666000000000000000000000000000000000000000000000000000000000000000000000000
+bbb8bbbbbbbbbbbbcccccccccccccccc000000006666666666666666000000000000000000000000000000000000000000000000000000000000000000000000
+bbb8bbbbbbbbbbbbcccccccccccccccc000000006666666666666666000000000000000000000000000000000000000000000000000000000000000000000000
+bbb8bbbbbbbbbbbbcccccccccccccccc000000006666666666666666000000000000000000000000000000000000000000000000000000000000000000000000
+bbb2bbbbbbbbbbbbcccccccccccccccc000000006666666666666666000000000000000000000000000000000000000000000000000000000000000000000000
+bbb2bbbbbbbbbbbbcccccccccccccccc000000006666666666666666000000000000000000000000000000000000000000000000000000000000000000000000
+bbb2bbbbbbbbbbbbcccccccccccccccc000000006666666666666666000000000000000000000000000000000000000000000000000000000000000000000000
+bbb2bbbbbbbbbbbbcccccccccccccccc000000006666666666666666000000000000000000000000000000000000000000000000000000000000000000000000
+2bb2bb2bbbbbbbbbcccccccccccccccc000000006666666666666666000000000000000000000000000000000000000000000000000000000000000000000000
+b2b2b2bbbbbbbbbbcccccccccccccccc000000006666666666666666000000000000000000000000000000000000000000000000000000000000000000000000
+bb222bbbbbbbbbbbbccccccccccccccb00000000b66666666666666b000000000000000000000000000000000000000000000000000000000000000000000000
+bbb2bbbbbbbbbbbbbbccccccccccccbb00000000bb666666666666bb000000000000000000000000000000000000000000000000000000000000000000000000
+bbbdbbbbbbbbbbbbccccccccbbcccbbb00000000bbb666bb66666666000000000000000000000000000000000000000000000000000000000000000000000000
+bbdbbbbbbbbbbbbbccccccccbbbccbbb00000000bbb66bbb66666666000000000000000000000000000000000000000000000000000000000000000000000000
+bdbbbbbbbbbbbbbbccccccccbbbbcbbb00000000bbb6bbbb66666666000000000000000000000000000000000000000000000000000000000000000000000000
+ddddddddbbbbbbbbccccccccbbbbbbbb00000000bbbbbbbb66666666000000000000000000000000000000000000000000000000000000000000000000000000
+bdbbbbbbbbbbbbbbccccccccbbbbbbbb00000000bbbbbbbb66666666000000000000000000000000000000000000000000000000000000000000000000000000
+bbdbbbbbbbbbbbbbccccccccbbbbbbbb00000000bbbbbbbb66666666000000000000000000000000000000000000000000000000000000000000000000000000
+bbbdbbbbbbbbbbbbccccccccbbbbbbbb00000000bbbbbbbb66666666000000000000000000000000000000000000000000000000000000000000000000000000
+bbbbbbbbbbbbbbbbccccccccbbbbbbbb00000000bbbbbbbb66666666000000000000000000000000000000000000000000000000000000000000000000000000
+bbbbebbbbbbbbbbb0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+bbbbbebbbbbbbbbb0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+bbbbbbebbbbbbbbb0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+eeeeeeeebbbbbbbb0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+bbbbbbebbbbbbbbb0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+bbbbbebbbbbbbbbb0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+bbbbebbbbbbbbbbb0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+bbbbbbbbbbbbbbbb0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+__map__
+0101010101010101010101010101010101010101010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0e1f1f1f1f1f1f0f010101010101010101010101010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+1f1f1f1f1f1f1f1f010101010101010101010101010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+1f1f1f1f1f1f1f1f010101010101010101010101010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+1f1f1f1f1f1f1f1f010101010101010101010101010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+1f1f1f1f1f1f1f1f010101010101010101010101010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+1e1f1f1f1f1f1f2f010101010101010101010101010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+01010101012e0101010101010101010101010101010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0101010101010101010101010101010101010101010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0101010101010101010101010101010101010101010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0101010101010101010101010101010101010101010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0101010101010101010101010101010101010101010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0101010101010101010101010101010101010101010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+3f40414243444546000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+4f50515253545556000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+5f60616263646566000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+6f70717273747576000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+7f80818283848586000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+8f90919293949596000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+9fa0a1a2a3a4a5a6000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000

@@ -1,0 +1,426 @@
+pico-8 cartridge // http://www.pico-8.com
+version 16
+__lua__
+p1 = {x = 0, y=0,vx = 0, vy = 0,
+s = 1, t = 0, f = false, atk = false,
+grounded = false, w = 8, h = 16,
+c = false, atim = 15,
+health = 10, energy = 10,m=99}
+
+bullets = {}
+fires = {}
+r = 20
+rt = 0
+bt = 120
+gy = 33
+ex = 80
+gravity = 0.4
+
+function _init()
+end
+
+function _update60()
+	_ctrlplayer()
+	rt += 0.01
+	if(rt > 1) then
+		rt = 0
+	end
+	ex-=0.1
+	if(ex < 0) then
+		ex = 120
+	end
+end
+
+function _draw()
+	cls()
+	palt(0,false)
+	palt(10,true)
+	_drawlight2()
+	_drawlight()
+	_drawfires()
+	
+	map(0,0,0,16,16,16)
+	
+	_animplayer()
+	spr(p1.s,p1.x,p1.y+(16-p1.h),ceil(p1.w/8),ceil(p1.h/8),p1.f)
+	--pset(p1.x,p1.y,7)
+	spr(67,ex,48,2,2)
+	_drawbulelts()
+	_drawui()
+end
+-->8
+
+--chooses player sprite
+function _animplayer()
+	
+	--if the player is walking
+	if(p1.vx == 0) and (p1.atk == false)
+	and (p1.grounded == true) then
+		
+		--crouching
+		if(p1.c== true) then		
+			p1.s = 48
+			p1.h = 8
+			p1.w = 8
+		--standing
+		else
+			p1.s = 36
+			p1.w = 8
+			p1.h = 16
+		end
+	else
+ 	p1.h = 16
+ 	
+		--chooses player direction
+		if(p1.vx < 0) then
+			p1.f = true
+		elseif(p1.vx > 0) then
+  	p1.f = false
+		end
+	
+		--when not jumping
+		if(p1.grounded) then
+		
+			--grounded attack
+			if(p1.atk == true) then
+				p1.s = 39
+				p1.w = 16
+			else
+				p1.t += 1
+				p1.w = 8
+				
+				--walking animation
+				if(p1.t < 12) then
+					p1.s = 36
+				elseif(p1.t < 24) then
+					p1.s = 37
+				elseif(p1.t < 36) then
+					p1.s = 36
+				elseif(p1.t < 48) then
+					p1.s = 38
+				end
+				
+				--reset player timer
+				if(p1.t >= 48) then
+					p1.t = 0
+				end		
+			end
+		--when jumping
+ 	else
+ 		p1.w = 16
+ 		
+ 		--arial attack
+ 		if(p1.atk) then
+ 			p1.s = 43
+ 		else
+ 			p1.s = 41
+ 		end
+		end
+	end
+end
+
+--player movement controls
+function _ctrlplayer()
+	
+	--left arrow
+	if(btn(0,0) or btn(0,1)) then
+		p1.vx = -0.8
+
+	--right arrow
+	elseif(btn(1,0) or btn(1,1)) then
+		p1.vx = 0.8
+	else
+		p1.vx = 0
+	end
+	
+	--up arrow: "jump"
+	if(btn(2,0) or btn(2,1)) then
+		
+		--if on the ground...
+		if(p1.grounded) then
+			p1.y = (gy+p1.h)-1
+			p1.vy = -4.5
+			p1.grounded = false
+			
+		--if already in the air...
+		else
+			p1.vy -= gravity/2.5
+		end
+	end
+	
+	--if player drops below ground level...
+	if(p1.y > (gy+p1.h)) then
+		p1.y = (gy+16)
+		p1.grounded = true
+	end
+	
+	--adds gravity to airborne player...
+	if(p1.grounded == false) then
+		p1.vy += gravity
+	else
+		p1.vy = 0
+	end
+	
+	p1.x += p1.vx
+	p1.y += p1.vy
+	
+	--down arrow
+	if(btn(3,0) or btn(3,1)) then
+		p1.c = true
+	else
+		p1.c = false
+	end
+	
+	--x
+	if(btn(5,0)) then
+		if(p1.atim >= 15) then
+			p1.atk = true
+			_p1atk()
+		end
+	end
+	
+	if(p1.atk) then
+		p1.atim -= 1
+		if(p1.atim < 0) then
+			p1.atim = 15
+			p1.atk = false
+		end
+	end
+	
+end
+
+--player attack like this
+function _p1atk()
+	if(p1.m > 0) then
+	p1.m -= 1
+	if(p1.f) then
+		add(bullets,{
+		x = p1.x+(p1.w/2),
+		y = p1.y+(p1.h/2),
+ 	vx = -2 + (p1.vx*1.2),
+		vy = -3 + (p1.vy*1.2),
+ 	s = 8,
+		t = 0,
+		a = true
+		})
+	else
+		add(bullets,{
+		x = p1.x+(p1.w/2),
+		y = p1.y+(p1.h/2),
+ 	vx = 2 + (p1.vx*1.2),
+		vy = -3 + (p1.vy*1.2),
+ 	s = 8,
+		t = 0,
+		a = true
+		})
+	
+	end
+	end
+end
+
+--draws player attacks
+function _drawbulelts()
+	for b in all(bullets) do
+		if(b.a == true) then
+			spr(b.s,b.x,b.y,1,1)
+			b.x += b.vx
+ 		b.y	+= b.vy
+			b.vy += gravity
+			b.t += 1
+		
+			if(b.y > gy+30) then
+ 			b.a = false
+ 			add(fires,{
+ 			x = b.x, y=b.y,
+ 			f = 120
+ 			})
+ 		end
+		
+			--bullet sprite
+			if(b.t < 3) then
+				b.s = 8
+ 		elseif(b.t < 6) then
+ 			b.s = 9
+ 		elseif(b.t < 12) then
+ 			b.s = 10
+ 		elseif(b.t < 15) then
+				b.s = 11
+			elseif(b.t < 18) then
+ 			b.s = 24
+			elseif(b.t < 21) then
+				b.s = 25
+			elseif(b.t < 24) then
+ 			b.s = 26
+			else
+				b.s = 27
+			end
+		
+			if(b.t >= 27) then
+				b.t = 0
+			end
+		end
+	end
+end
+
+function _drawfires()
+	for f in all(fires) do
+		if(f.f > 0) then
+		
+		f.f -= 1
+		
+		if(f.f > 20) then
+			if(f.f%10 > 5) then
+				spr(12,f.x-8,f.y-16,2,2)
+			else
+				spr(14,f.x-8,f.y-16,2,2)
+			end
+		elseif(f.f > 15) then
+			spr(14,f.x-8,f.y-16,2,2)
+		elseif(f.f > 10) then
+			spr(45,f.x-8,f.y-16,2,2)
+		elseif(f.f > 5) then
+			spr(47,f.x,f.y-18,1,1)
+		else
+			spr(63,f.x+2,f.y-20,1,1)
+		end
+		end
+	end
+end
+
+function _drawlight()
+	for f in all(fires) do
+		if(f.f > 0) then
+		if(f.f > 20) then
+		--	circfill(f.x,f.y-5,r+(f.f%10)+4,1)
+			circfill(f.x,f.y-5,(r+(f.f%10)-2)/2,13)
+		else
+			--circfill(f.x,f.y-5,(10+f.f)-r,1)
+		end
+	end
+	end
+end
+
+function _drawlight2()
+	for f in all(fires) do
+		if(f.f > 0) then
+		if(f.f > 20) then
+			circfill(f.x,f.y-5,r+(f.f%10)+4,1)
+		
+		else
+			circfill(f.x,f.y-5,(16+f.f)-r,1)
+		end
+	end
+	end
+end
+-->8
+function _drawui()
+
+	--draws black box
+	sspr(0,112,2,2,0,100,30,50)
+	
+	--draws player & icons
+	spr(01,2,90,3,4)
+	spr(16,30,104,1,1)
+	spr(32,30,114,1,1)
+	spr(7,76,104,1,2)
+	
+	--draws health bar
+	line(38,107,38+3*(10),107,5)
+	line(38,108,38+3*(10),108,5)
+	line(38,106,38+3*(p1.health),106,8)
+	line(38,107,38+3*(p1.health),107,8)
+	line(38,108,38+3*(p1.health),108,8)
+	print("hp",39,102,7)
+	
+	--draws energy bar
+	line(38,119,38+3*(10),119,5)
+	line(38,119,38+3*(10),119,5)
+	line(38,117,38+3*(p1.energy),117,9)
+	line(38,118,38+3*(p1.energy),118,9)
+	line(38,119,38+3*(p1.energy),119,9)
+	print("en",39,113,7)
+	
+	--prints num of molotov
+	print("x"..tostr(p1.m),84,113,5)
+	print("x"..tostr(p1.m),84,112,7)
+
+	--draws player "blink"
+	bt-=1
+	if(bt < 0) then
+		bt = 220
+	end
+	
+	if(bt > 40) then
+	elseif(bt > 30) then
+		spr(04,2,98,3,1)
+	elseif(bt > 20) then
+		spr(20,2,98,3,1)
+	elseif(bt > 10) then
+		spr(04,2,98,3,1)
+	else
+	end
+
+end
+__gfx__
+00000000aaaaaaaaaaaaaaaaaaaaaaaaa494944444fffff55555aaaaaaaaaaaa1a1aaaaaaa1a11aaaaa1a1aaaaaaaa1aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaac
+00000000aaaaaa444444444aaaaaaaaaa4449444f4ffffff5555aaaaaaaa7aaaaa1c1aaa1aac1c1aaaaaac1aabbacaaaaaaaaaaaaaacaacaaaaaaaaaaacaaaaa
+00700700aaaa444444445444aaaaaaaaa444444fff4ffffdd555aaaaaa67aaaaaca1caaaaaaaa3c1aaaaaaca3bb7aaa1aaaaaaccccaaaacaaaaaaaaccccaaccc
+00077000aaa44444444544554aaaaaaaa444445ffffffdddd555aaaaa66aaaaaaaaa3aaaaca7b33ab77bacca33677acaaaaccccccaaccccaaaaaaacc7ccaccca
+00077000aa4449444444444555aaaaaaa44f5555fffffddd5555aaaaa667aaaaaaab33aaaa7763aa36633c1aa666bac1aaaccccccacccccaaaaaaa777caaccaa
+00700700aa44944944455554554aaaaaa4fff55555fffdd55555aaaaaa67aaaaaaa766aaabb666aa3663aaaaaa6333ccaaacccccaac7cccaaaaaaccccaaccccc
+00000000a449449444fff555555aaaaaa4ffff7c005ffd5c0555aaaaaa33aaaaaaa766aaabb36aaaaaaaaaaaaaaa3c1aaaaaccccccccccaaaaaaccaaaaccc7ca
+00000000a494494444fffff54555aaaa4afffffffffffddff55aaaaaaab3aaaaaaab33aaaa33aaaaaaaaaaaaaaaaacaaaaaaccccc7ccccaaaaaaaaaaacccccca
+a88a88aaa494944444fffff55555aaaaa494944444fffff55555aaaaaab3aaaaaa33baaaaaaa33aaaaaaaaaaaa1aaaaaaaaccc7777cccccaaaaaacccccc77cca
+8888888aa4449444f4ffffff5555aaaaa4449444f4ffffff5555aaaaab333aaaaa667aaaaaa63bbaaaaaaaaaa1c3aaaaaacccc777ccc7ccaaaacccccccc7ccca
+8ee8888aa444444fff4fffddd555aaaaa444444ff4ffffffd555aaaaa7336aaaaa667aaaaa666bbaaaaa36631c3336aaaccccc777cc7ccccaaaccccccc77ccca
+8e88888aa4445555fffffddd5555aaaaa44444ffffffffddd555aaaaa7766aaaaa33baa1aa3677aaa1c33663ccab666aaccc77777cc7ccccaaccccc77777ccca
+a8e888aaa44ff55555fffdd55555aaaaa44ffffffffffdddd555aaaaa7766aaaaaa3aaaaa33b7acaaccab77baca77633accc7777cc77ccaaaacccc7777cccaaa
+aa888aaaa4fff77c005ffd5c0555aaaaa4fff555555ffdd55555aaaaab663aaaaaaccac11c3aaaaaacaaaaaa1aaa7bb3accc7777777cccaaaacccc7777cccaaa
+aaa8aaaaa4ffff77ccfffdd7c555aaaaa4ffff555555fd555555aaaaab333aaaaaa1cc1a11c1caa1a1caaaaaaaacabbaaacccc77777cccaaaaaccc7777cccaaa
+aaaaaaaa4afffffffffffddff55aaaaa4afffffffffffdddf55aaaaaaa33aaaaaaaaaaaaaa11a1aaaa1a1aaaa1aaaaaaaaacccc77ccccaaaaaaacccccccaaaaa
+aaaa9aaaaaa4ffffffffffdfd55aaaaaaaa4444aaaa4444aaaa4444aaaaaaa4444aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaac
+aaa9aaaaaaa4dfffffffffddd55aaaaaaa444554aa444554aa444554aaaaa44454aaaaaaaaaaa44444aaaaaaaaa4a44444aaaaaaaaaaaaaaacacaaacaacccaaa
+a999aaaaaaa4dffffffdddddd5a5aaaaaa44fcaaaa44fcaaaa44fcaaaaaaa44fcaaaaaaaaaa4444444aaaaaaaaaa444444aaaaaaaaaaaaaaccccaaaaacccccca
+aa999aaaaaa44dffffffddddd5aaaaaaaa4dfffaaa4dfffaaa4dfffaaaaaa4dfffaaaaaaaaaa44fc4aaaaaaaaaaa44fc4aaaaaaaaaaaaaaccccaaccaacccacca
+aaa999aaaaa444fffffffddd55aaaaaaaaa4ffaaaaa4ffaaaaa4ffaaaaaaa4ddfaaaaaaaaaa428fffaaaaaaaaaa4288ffaaaaaaaaaaaaaacaaaaccaaaccaaaca
+aaaa999aaaa444dfffeeeedd55aaaaaaaa888daaa888882aa888882aaaaaa28888888fffaa2288dfaaaaaaaaaa228888888ffaaaaaaacaaaaaacccaaacaaaaaa
+aaaa9aaaaa4aa4dfffffffdaaa5aaaaaa882882aa882882aa882882aaaaa228888888faaaa28828aaaaaaaaaaa288888888faaaaaaaaaaaaaacccaaaaaaaaaaa
+aaa9aaaaaaaaadfdffffffdaaaaaaaaa8822882a8822882a8822882aaaa222822aaaaaaaaaa828822ddaaaaaaaa88882ddaaaaaaaaccaaaaaacccaaaaaaaaaaa
+aaa4444aaa88ddffddfffddd22aaaaaa8828882aff2888daff2888daaaaa28822aaaaaaaaa8828882ddaaaaaaa8888aaaaaaaaaaaaaaaaaaaac7ca7aaaaaaaac
+aa4445548888ffffdddddddd2222aaaaff8888daff8888daff8888daaaaaa8882faaaaaaaaddd888faaaaaaaaadddddddaaaaaaaaacaaacccccccaaaaaaaaaaa
+aa44fcaa88888ffdddfdddd222222aaaff8888daaa8881aaaa888daaaaaa1dddddaaaaaaaadddd8ffaaaaaaaaadddddddaaaaaaaaaaaaccc7cccacaaaaaaaaaa
+a8888ffa8888888dddfdddd2222222aaaaddd1aaaaddd1aaaaddddaaaaa111dddddaaaaaaaa1ddddaaaaaaaaaaa1ddddaaaaaaaaaaaaacc7caaaacacaaacaaaa
+888888aa888888888ddddd22222222aaaadd11aaaddd111aaa1ddddaaa111aaadddaaaaaaaddddd1aaaaaaaaaaddddd1aaaaaaaaaaaaac77aacccaaaaaaaaaaa
+8811881a88888288888882222222222aaadd11aaaddaa111a111addda111aaaaaddaaaaaaaddda111aaaaaaaaaddda111aaaaaaaaaaacc7ccccaaaaaacaaaaaa
+8111888f88888288888822222228222aaadd11aadddaaa11111aaadda11aaaaaadddaaaaaaaddaa111aaaaaaaaaddaa111aaaaaaaaaacccc7ccaaaaaaaaaa7aa
+1111188f888822288888822222228222aaddd11aadddaaa1a111aaada111aaaaaddddaaaaaaaaaaa1111aaaaaaaaaaaa1111aaaaaaaacccccaaaaaaaaaaaaaaa
+aaaaaaaaaaaaaaaaddddddddaaa000aaaaaaaaaa0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+aaaaaaaaaaaaaaaaddddddddaa00000aaaaaaaaa0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+aaaaaaaaaaaaaaaaddddddddaa000000aaaaaaaa0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+aaaaaaaaaaaaaaaaddddddddaa000000aaaaaaaa0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+aaaaaaaaaaaaaaaaddddddddaaa000000aaaaaaa0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+a5a5aaaaaa5aaaaaddddddddaaaa00000aaaaaaa0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+5a5aa5aaaaa5a5aaddddddddaaa000000aaaaaaa0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+a555aa5aa5a55aaaddddddddaa0000000aaaaaaa0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+555555555555555500000000a000a00000aaaaaa0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+555555550555055500000000a00aa00000aaaaaa0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+555555555505550500000000aaaa000000aaaaaa0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+555555555050505000000000aaaa0000000aaaaa0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+555555550500050000000000aaaaaa00000aaaaa0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+555555550005000500000000aaaaaa000000aaaa0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+555555550000000000000000aaaaaa0000000aaa0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+555555550000000000000000aaaaaa000a0000aa0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+__map__
+0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+4141000000404041404100000000400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+5050505050505050505050505050505000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+5050505050505050505050505050505000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+5151515151515151515151515151515100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+5252525252525252525252525252525200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+5252525252525252525252525252525200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+5252525252525252525252525252525200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+5252525252525252525252525252525200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
